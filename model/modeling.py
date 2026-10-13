@@ -432,6 +432,7 @@ def load_balancing_loss_func(
         tokens_per_expert = selected_experts[expert_attention_mask].flatten().bincount(minlength=num_experts) / selected_experts[expert_attention_mask].numel()
         router_prob_per_expert = routing_weights[expert_attention_mask].mean(0)
 
+    # the nearer aux_loss equals to 1, the better balancing between experts
     overall_loss = (tokens_per_expert * router_prob_per_expert).sum()
     return overall_loss * num_experts
 

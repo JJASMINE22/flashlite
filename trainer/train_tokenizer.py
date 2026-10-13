@@ -26,6 +26,8 @@ def generate_text(data_dir, limit=None):
                     yield data["text"]
     data_dir = Path(data_dir)
     datapaths = list(data_dir.glob("*.jsonl"))
+    if not datapaths:
+        raise ValueError("No jsonl files in data_dir")
     generators = [_generate_text(datapath) for datapath in datapaths]
     
     for i in enumerate(range(limit)):
