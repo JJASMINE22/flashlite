@@ -65,8 +65,8 @@ class PretrainedDataset(Dataset):
                 max_length=self.args.max_length - 1,
                 truncation=True
             )
-            input_ids = [self.tokenizer.bos_token_id] + encoding.input_ids
-            attn_mask = [1] + encoding.attention_mask
+            input_ids = encoding.input_ids + [self.tokenizer.eot_token_id]
+            attn_mask = encoding.attention_mask + [1]
             input_ids = torch.tensor(input_ids, dtype=torch.long)
             attn_mask = torch.tensor(attn_mask, dtype=torch.float)
             labels = torch.where(
