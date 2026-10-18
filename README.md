@@ -275,7 +275,7 @@ python data_utils/data.py --data_dir ./datasets/sft
 # 📈 训练配置与 W&B 指标
 
 > 本节展示个人实测训练时的模型配置与 W&B 训练指标截图。
-> **当前为空，待训练完成后补充**；参数量以 `sum(p.numel())` 实测为准，默认配置下的 ≈94M 为公式推算值，仅作参考。
+> 当前已补充 **GRPO（RLAIF）** 阶段指标，Pretrain / SFT 阶段待训练完成后补充；参数量以 `sum(p.numel())` 实测为准，默认配置下的 ≈94M 为公式推算值，仅作参考。
 
 ## Ⅰ. 测试配置
 
@@ -294,27 +294,31 @@ python data_utils/data.py --data_dir ./datasets/sft
 | 训练数据规模 | 待补充 | — |
 | GPU 型号 × 数量 | 待补充 | — |
 
-## Ⅱ. Pretrain
+## Ⅱ. GRPO（RLAIF）
 
-<!-- TODO：预训练 W&B 面板截图（train/loss、train/aux_loss、train/lr 曲线）。
-     注：train_pretrain.py / train_pretrain_packed.py 当前未接入 wandb，仅 logging 输出；
-     如需 W&B 指标，可参照 train_sft.py 的 log_metrics 模式补接（rank0 wandb.init +
-     log_steps 处 all_reduce 汇总后 wandb.log），或在下方贴训练日志截图 -->
+W&B project：`FlashLite-GRPO`。将对应面板截图按下述文件名放入 `assets/` 目录（不存在时新建）即可自动渲染：
+
+| 截图内容 | 文件名 |
+|---|---|
+| 主训练指标：`train/policy_loss`、`train/aux_loss`、`train/reward`、`train/advantage`、`train/lr`、`train/step` | `assets/wandb_grpo_train.png` |
+| 训练把控指标：`train/group_similarity`、`train/reward_std`、`train/low_signal_ratio` | `assets/wandb_grpo_health.png` |
+
+![GRPO 主训练指标](assets/wandb_grpo_train.png)
+
+![GRPO 训练把控指标](assets/wandb_grpo_health.png)
+
+## Ⅲ. Pretrain（待补充）
+
+> train_pretrain.py / train_pretrain_packed.py 当前未接入 wandb，仅 logging 输出；如需 W&B 指标，可参照 train_sft.py 的 log_metrics 模式补接（rank0 `wandb.init` + `log_steps` 处 all_reduce 汇总后 `wandb.log`），或在下方贴训练日志截图。
+
+<!-- TODO：预训练指标截图（train/loss、train/aux_loss、train/lr 曲线），建议文件名 assets/wandb_pretrain.png -->
 
 **训练指标**：待补充
 
-## Ⅲ. SFT
+## Ⅳ. SFT（待补充）
 
 <!-- TODO：SFT W&B 面板截图（project: FlashLite-SFT）。
-     指标：train/loss、train/aux_loss、train/lr、train/step -->
-
-**训练指标**：待补充
-
-## Ⅲ. GRPO
-
-<!-- TODO：GRPO W&B 面板截图（project: FlashLite-GRPO）。
-     指标：train/policy_loss、train/aux_loss、train/reward、train/advantage、train/lr、train/step，
-     以及训练把控指标 train/group_similarity、train/reward_std、train/low_signal_ratio -->
+      指标：train/loss、train/aux_loss、train/lr、train/step；建议文件名 assets/wandb_sft.png -->
 
 **训练指标**：待补充
 
