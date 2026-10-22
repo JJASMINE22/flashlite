@@ -316,7 +316,7 @@ python data_utils/data.py --data_dir ./datasets/sft
 
 与默认配置的差异：`hidden_size` 512→1024、`intermediate_size` 1536→3072、`num_hidden_layers` 8→24、`head_dim` 64→128；`tie_word_embeddings=False`（`lm_head` 与 `embed_tokens` 为相互独立的权重）。按 GRPO 训练检查点（step 14800）实测：总参数量 **1,006,803,968 ≈ 1.01B**，每 token 激活 ≈ **554M**（2/4 专家激活；含 embedding / lm_head / router），两份 embedding 权重均计入总量。
 
-> 注意：当前实现未声明 `_tied_weights_keys`，transformers 5.x 下即使配置 `tie_word_embeddings=True` 也不会实际共享 `lm_head` 与 `embed_tokens`（tie 为空操作，二者独立初始化、独立训练、独立保存）。因此导出目录 `config.json` 中该字段应保持 `false`，与权重实际状态一致；若需真正启用 tie，需在模型类上补充 `_tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}`。
+> 注意：当前实现已注释 `_tied_weights_keys`，transformers 5.x 下即使配置 `tie_word_embeddings=True` 也不会实际共享 `lm_head` 与 `embed_tokens`（tie 为空操作，二者独立初始化、独立训练、独立保存）。若需启用 tie，需取消模型类 `_tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}`的注释。
 
 ### 训练指标
 
