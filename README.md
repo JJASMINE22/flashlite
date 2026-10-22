@@ -3,7 +3,7 @@
 <p>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
-    <img src="assets/logo.png" alt="FlashLite" width="320">
+    <img src="assets/logo.png" alt="FlashLite" width="200">
   </picture>
 </p>
 
