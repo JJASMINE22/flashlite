@@ -1,0 +1,10 @@
+torch>=2.7.0
+transformers>=5.8.0
+datasets>=4.0.0
+pandas>=2.3.0
+tokenizers>=0.22.0
+safetensors>=0.5.0
+tqdm>=4.67.0
+wandb>=0.26.0
+flash-attn>=2.8.3
+numpy>=1.26.0

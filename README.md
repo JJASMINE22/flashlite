@@ -49,20 +49,20 @@ FlashLite 是一个个人开发的轻量级 LLM 训练框架，目标是在**不
 
 主线模型 `FlashLiteForCausalLM`（`model/modeling.py`）为 Decoder-Only Transformer，默认配置如下（`configuration/model_config.py`）：
 
-| 配置项 | 默认值 | 说明 |
+| 配置项 | 默认值  | 说明 |
 |---|---|---|
 | `vocab_size` | 12296 | Byte-level BPE 词表 12288 + 8 个扩展 token（tool / think / buffer） |
-| `hidden_size` | 512 | |
+| `hidden_size` | 512 | 隐藏层维度 |
 | `intermediate_size` | 1536 | SwiGLU FFN |
-| `num_hidden_layers` | 8 | |
+| `num_hidden_layers` | 8 | Transformer 解码器层数 |
 | `num_attention_heads` | 8 | Q 头数 |
 | `num_key_value_heads` | 4 | KV 头数（GQA，8:4） |
 | `head_dim` | 64 | Q/K 各挂 RMSNorm（Qwen3 风格） |
 | `num_experts` / `num_experts_per_tok` | 4 / 2 | Sparse MoE，`norm_topk_prob` 归一化路由 |
 | `router_aux_loss_coef` | 0.01 | 专家负载均衡辅助损失 |
-| `max_position_embeddings` | 32768 | |
+| `max_position_embeddings` | 2048 | 最大位置数，与训练序列长度 `DataArgs.max_length`（默认 2048）对齐，亦为 RoPE 缓存上限 |
 | `rope_theta` | 1e6 | RoPE base，支持 `default / linear / llama3` 缩放。**注意**：若训练小体量、短上下文（如 ≤2048）的小模型，且后续需要外推，建议将 `rope_theta` 设为 **1e4 ~ 1e5**；过高的 base 会使低频维度占比偏高，短上下文训练下外推效果可能不达预期 |
-| `tie_word_embeddings` | False | |
+| `tie_word_embeddings` | False | `lm_head` 与 `embed_tokens` 为独立权重 |
 
 按默认配置估算，总参数量 ≈ **94M**，每 token 激活 ≈ **57M**（2/4 专家激活）；不同配置下的实测参数量与训练指标见下文「训练配置与 W&B 指标」。
 
@@ -116,12 +116,11 @@ flashlite/
 
 ## 第 0 步：环境安装
 
-需要 CUDA GPU（训练脚本入口处 `assert torch.cuda.is_available()`）。仓库暂未提供 `requirements.txt`，建议依赖清单：
+需要 CUDA GPU（训练脚本入口处 `assert torch.cuda.is_available()`）。安装依赖：
 
 ```bash
-pip install torch transformers datasets pandas tokenizers safetensors tqdm wandb
-# flash-attn 为硬依赖（modeling_utils 顶层 import），仅用 sdpa/eager 后端也需安装
-pip install flash-attn --no-build-isolation
+# flash-attn 需源码编译安装（modeling_utils 顶层 import，仅用 sdpa/eager 后端也需安装）
+pip install -r requirements.txt --no-build-isolation
 ```
 
 > 训练脚本在 Windows 下自动使用 gloo 后端、Linux 下使用 nccl；`wandb` 未配置账号时可 `export WANDB_MODE=disabled` 跳过面板上报。
@@ -299,7 +298,7 @@ python data_utils/data.py --data_dir ./datasets/sft
 | `num_key_value_heads` | 4 | 4 |
 | `head_dim` | **128** | 64 |
 | `hidden_act` | silu | silu |
-| `max_position_embeddings` | 32768 | 32768 |
+| `max_position_embeddings` | 2048 | 2048 |
 | `initializer_range` | 0.02 | 0.02 |
 | `rms_norm_eps` | 1e-6 | 1e-6 |
 | `rope_theta` | 1e6 | 1e6 |
@@ -319,8 +318,6 @@ python data_utils/data.py --data_dir ./datasets/sft
 > 注意：当前实现已注释 `_tied_weights_keys`，transformers 5.x 下即使配置 `tie_word_embeddings=True` 也不会实际共享 `lm_head` 与 `embed_tokens`（tie 为空操作，二者独立初始化、独立训练、独立保存）。若需启用 tie，需取消模型类 `_tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}`的注释。
 
 ### 训练指标
-
-W&B project：`FlashLite-GRPO`。将包含主训练指标（`train/policy_loss`、`train/aux_loss`、`train/reward`、`train/advantage`、`train/lr`）与训练把控指标（`train/group_similarity`、`train/reward_std`、`train/low_signal_ratio`）的面板截图放入 `assets/` 目录（不存在时新建）即可自动渲染：
 
 ![GRPO 训练指标](assets/wandb_grpo.png)
 

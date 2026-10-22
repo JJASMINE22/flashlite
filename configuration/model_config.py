@@ -21,7 +21,7 @@ class FlashLiteConfig(PretrainedConfig):
             num_key_value_heads=4,
             head_dim=64,
             hidden_act="silu",
-            max_position_embeddings=32768,
+            max_position_embeddings=2048,
             initializer_range=0.02,
             rms_norm_eps=1e-6,
             rope_theta=1000000.0,
