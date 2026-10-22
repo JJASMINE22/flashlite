@@ -436,8 +436,9 @@ def load_balancing_loss_func(
     overall_loss = (tokens_per_expert * router_prob_per_expert).sum()
     return overall_loss * num_experts
 
-        
 class FlashLiteForCausalLM(FlashLitePretrainedModel, GenerationMixin):
+    # _tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}
+
     def __init__(self, config):
         super().__init__(config)
         self.model = FlashLiteModel(config)

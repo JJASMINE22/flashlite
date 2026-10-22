@@ -1,5 +1,12 @@
 <div align="center">
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
+    <img src="assets/logo.png" alt="FlashLite" width="320">
+  </picture>
+</p>
+
 # FlashLite
 
 **从零手写的小型 LLM 训练框架：Tokenizer → Pretrain → SFT → DPO → GRPO 全链路**
@@ -274,53 +281,48 @@ python data_utils/data.py --data_dir ./datasets/sft
 
 # 📈 训练配置与 W&B 指标
 
-> 本节展示个人实测训练时的模型配置与 W&B 训练指标截图。
-> 当前已补充 **GRPO（RLAIF）** 阶段指标，Pretrain / SFT 阶段待训练完成后补充；参数量以 `sum(p.numel())` 实测为准，默认配置下的 ≈94M 为公式推算值，仅作参考。
+> 本节展示 **GRPO（RLAIF）** 实测训练的模型配置与 W&B 指标截图；参数量以 `sum(p.numel())` 实测为准，默认配置下的 ≈94M 为公式推算值，仅作参考。
 
-## Ⅰ. 测试配置
+## GRPO（RLAIF）
 
-<!-- 补充说明：默认配置见上文「模型结构」一节表格；
-     与默认配置不同的项（如 vocab_size / hidden_size / num_hidden_layers / num_experts /
-     num_experts_per_tok / max_position_embeddings / 序列长度 max_length / 数据集规模 / 卡数等）
-     请在下表逐项填写实际使用值，方便读者对齐复现条件 -->
+### 模型配置
 
-| 配置项 | 测试值 | 默认值（对照） |
+策略模型从 SFT 检查点初始化（`--pretrained_dir ./sft`），`FlashLiteConfig` 各项参数如下（**加粗** 项为相对默认配置的调整，其余与默认一致）：
+
+| 配置项 | GRPO 训练值 | 默认值（对照） |
 |---|---|---|
-| hidden_size | 待补充 | 512 |
-| num_hidden_layers | 待补充 | 8 |
-| num_experts / num_experts_per_tok | 待补充 | 4 / 2 |
-| max_length（序列长度） | 待补充 | 2048 |
-| 参数量（实测） | 待补充 | ≈94M（推算） |
-| 训练数据规模 | 待补充 | — |
-| GPU 型号 × 数量 | 待补充 | — |
+| `vocab_size` | 12296 | 12296 |
+| `hidden_size` | **1024** | 512 |
+| `intermediate_size` | **3072** | 1536 |
+| `num_hidden_layers` | **24** | 8 |
+| `num_attention_heads` | 8 | 8 |
+| `num_key_value_heads` | 4 | 4 |
+| `head_dim` | **128** | 64 |
+| `hidden_act` | silu | silu |
+| `max_position_embeddings` | 32768 | 32768 |
+| `initializer_range` | 0.02 | 0.02 |
+| `rms_norm_eps` | 1e-6 | 1e-6 |
+| `rope_theta` | 1e6 | 1e6 |
+| `rope_scaling` | None | None |
+| `attn_bias` | False | False |
+| `attn_dropout` | 0.0 | 0.0 |
+| `num_experts` | 4 | 4 |
+| `num_experts_per_tok` | 2 | 2 |
+| `norm_topk_prob` | True | True |
+| `output_router_logits` | True | True |
+| `router_aux_loss_coef` | 0.01 | 0.01 |
+| `pad_token_id` | 0 | 0 |
+| `tie_word_embeddings` | False | False |
 
-## Ⅱ. GRPO（RLAIF）
+与默认配置的差异：`hidden_size` 512→1024、`intermediate_size` 1536→3072、`num_hidden_layers` 8→24、`head_dim` 64→128；`tie_word_embeddings=False`（`lm_head` 与 `embed_tokens` 为相互独立的权重）。按 GRPO 训练检查点（step 14800）实测：总参数量 **1,006,803,968 ≈ 1.01B**，每 token 激活 ≈ **554M**（2/4 专家激活；含 embedding / lm_head / router），两份 embedding 权重均计入总量。
 
-W&B project：`FlashLite-GRPO`。将对应面板截图按下述文件名放入 `assets/` 目录（不存在时新建）即可自动渲染：
+> 注意：当前实现未声明 `_tied_weights_keys`，transformers 5.x 下即使配置 `tie_word_embeddings=True` 也不会实际共享 `lm_head` 与 `embed_tokens`（tie 为空操作，二者独立初始化、独立训练、独立保存）。因此导出目录 `config.json` 中该字段应保持 `false`，与权重实际状态一致；若需真正启用 tie，需在模型类上补充 `_tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}`。
 
-| 截图内容 | 文件名 |
-|---|---|
-| 主训练指标：`train/policy_loss`、`train/aux_loss`、`train/reward`、`train/advantage`、`train/lr`、`train/step` | `assets/wandb_grpo_train.png` |
-| 训练把控指标：`train/group_similarity`、`train/reward_std`、`train/low_signal_ratio` | `assets/wandb_grpo_health.png` |
+### 训练指标
 
-![GRPO 主训练指标](assets/wandb_grpo_train.png)
+W&B project：`FlashLite-GRPO`。将包含主训练指标（`train/policy_loss`、`train/aux_loss`、`train/reward`、`train/advantage`、`train/lr`）与训练把控指标（`train/group_similarity`、`train/reward_std`、`train/low_signal_ratio`）的面板截图放入 `assets/` 目录（不存在时新建）即可自动渲染：
 
-![GRPO 训练把控指标](assets/wandb_grpo_health.png)
-
-## Ⅲ. Pretrain（待补充）
-
-> train_pretrain.py / train_pretrain_packed.py 当前未接入 wandb，仅 logging 输出；如需 W&B 指标，可参照 train_sft.py 的 log_metrics 模式补接（rank0 `wandb.init` + `log_steps` 处 all_reduce 汇总后 `wandb.log`），或在下方贴训练日志截图。
-
-<!-- TODO：预训练指标截图（train/loss、train/aux_loss、train/lr 曲线），建议文件名 assets/wandb_pretrain.png -->
-
-**训练指标**：待补充
-
-## Ⅳ. SFT（待补充）
-
-<!-- TODO：SFT W&B 面板截图（project: FlashLite-SFT）。
-      指标：train/loss、train/aux_loss、train/lr、train/step；建议文件名 assets/wandb_sft.png -->
-
-**训练指标**：待补充
+![GRPO 训练指标](assets/wandb_grpo.png)
 
 ---
 
